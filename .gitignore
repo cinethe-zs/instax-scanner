@@ -1,0 +1,15 @@
+# Build outputs
+dist/
+build/
+*.spec
+
+# Windows build environment
+build_win_env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Debug outputs from engine
+debug_*.jpg
