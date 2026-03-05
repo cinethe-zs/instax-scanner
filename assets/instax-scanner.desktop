@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Instax Scanner
+Comment=Extract Instax photos from flatbed scans
+Exec=instax-scanner
+Icon=instax-scanner
+Categories=Graphics;Scanning;
+Keywords=instax;photo;scan;extract;fujifilm;
+StartupNotify=true
+Terminal=false

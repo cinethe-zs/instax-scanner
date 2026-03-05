@@ -1,0 +1,19 @@
+Package: instax-scanner
+Version: 1.0.2
+Section: graphics
+Priority: optional
+Architecture: all
+Installed-Size: 137
+Depends: python3 (>= 3.8), python3-gi, python3-opencv | python3-cv2, gir1.2-gtk-3.0
+Recommends: python3-numpy
+Maintainer: Instax Scanner <instax-scanner@localhost>
+Description: Extract Instax photos from flatbed scanner scans
+ Instax Scanner provides a graphical interface to automatically
+ detect and extract individual Instax Mini, Square, and Wide photos
+ from a multi-photo flatbed scanner scan (JPEG, PNG, TIFF).
+ .
+ Features:
+  - Supports Mini (62x46mm), Square (62x62mm), and Wide (99x62mm) formats
+  - Produces a tight crop and a full-card bordered crop per photo
+  - Auto-detects scan DPI; handles any rotation and touching photos
+  - Batch-process multiple scan files at once
