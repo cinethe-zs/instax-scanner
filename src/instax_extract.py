@@ -244,6 +244,44 @@ def tight_crop(image, cx, cy, cw, ch, angle, pad_px):
     return rot[y1:y2, x1:x2]
 
 
+def large_card_crop(image, cx, cy, cw, ch, angle, pad_px):
+    """
+    Fixed-size crop: content + pad_px on all 4 sides.
+    The output dimensions are always exactly (cw + 2*pad_px) x (ch + 2*pad_px).
+    Areas that fall outside the scan boundary are filled with white (255),
+    matching the scanner backlight colour.
+    """
+    H, W = image.shape[:2]
+    ch_n = image.shape[2] if image.ndim == 3 else 1
+    out_w = int(round(cw + 2 * pad_px))
+    out_h = int(round(ch + 2 * pad_px))
+
+    # Rotate full image around the card centre; out-of-image areas → white
+    M   = cv2.getRotationMatrix2D((cx, cy), angle, 1.0)
+    rot = cv2.warpAffine(image, M, (W, H), flags=cv2.INTER_CUBIC,
+                         borderMode=cv2.BORDER_CONSTANT,
+                         borderValue=(255,) * ch_n)
+
+    # Desired crop window (may extend outside scan bounds)
+    x1 = int(round(cx - cw / 2 - pad_px))
+    y1 = int(round(cy - ch / 2 - pad_px))
+    x2 = x1 + out_w
+    y2 = y1 + out_h
+
+    # White canvas of exact target size
+    canvas = np.full((out_h, out_w, ch_n) if ch_n > 1 else (out_h, out_w),
+                     255, dtype=image.dtype)
+
+    # Copy only the in-bounds pixels
+    sx1, sy1 = max(0, x1), max(0, y1)
+    sx2, sy2 = min(W, x2), min(H, y2)
+    if sx2 > sx1 and sy2 > sy1:
+        dx1, dy1 = sx1 - x1, sy1 - y1
+        canvas[dy1:dy1 + (sy2 - sy1), dx1:dx1 + (sx2 - sx1)] = rot[sy1:sy2, sx1:sx2]
+
+    return canvas
+
+
 def card_crop(image, cx, cy, cw, ch, angle,
               pad_top, pad_bot, pad_sides, rotated=False):
     """
@@ -380,7 +418,8 @@ def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
                 c = None
                 lc = None
                 if fmt in INSTAX_BORDER:
-                    top_mm, bot_mm, side_mm = INSTAX_BORDER[fmt]
+                    orig_top, orig_bot, orig_side = INSTAX_BORDER[fmt]
+                    top_mm, bot_mm, side_mm = orig_top, orig_bot, orig_side
                     rot_card = _is_rotated(fmt, cw2, ch2)
                     if detect_flip(gray, cx, cy, cw2, ch2, ang, dpi,
                                    rotated=rot_card):
@@ -392,9 +431,12 @@ def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
                                   top_px, bot_px, side_px,
                                   rotated=rot_card)
 
-                    # ── Large card: thick border (bot_mm) on all 4 sides ──────
-                    large_px = int(mm2px(bot_mm, dpi)) + extra_px
-                    lc = tight_crop(image, cx, cy, cw2, ch2, ang, large_px)
+                    # ── Large card: thick border on all 4 sides, fixed size ───
+                    # Always use orig_bot (the physical writing-area border)
+                    # so output dimensions are constant for a given format.
+                    # Out-of-scan areas are filled with white.
+                    large_px = int(mm2px(orig_bot, dpi)) + extra_px
+                    lc = large_card_crop(image, cx, cy, cw2, ch2, ang, large_px)
 
                 results.append({"fmt": fmt or "unknown",
                                  "tight": t, "card": c, "large_card": lc,
