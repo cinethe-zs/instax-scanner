@@ -244,23 +244,51 @@ def tight_crop(image, cx, cy, cw, ch, angle, pad_px):
     return rot[y1:y2, x1:x2]
 
 
-def large_card_crop(image, cx, cy, cw, ch, angle, pad_px):
+def sample_background(image, sample_px=40):
+    """
+    Estimate the scanner backlight colour by sampling 40×40 px patches from
+    the four corners of the scan (offset by SCAN_BORDER to skip the dark edge
+    strip).  Returns the per-channel median as a tuple (or scalar for
+    grayscale), suitable for use as a fill colour.
+    """
+    H, W = image.shape[:2]
+    b  = SCAN_BORDER + 4          # skip the masked dark edge strip
+    s  = min(sample_px, (H - 2*b) // 2, (W - 2*b) // 2)
+    if s <= 0:
+        return (255,) * (image.shape[2] if image.ndim == 3 else 1)
+
+    patches = [
+        image[b     : b+s,   b     : b+s],
+        image[b     : b+s,   W-b-s : W-b],
+        image[H-b-s : H-b,   b     : b+s],
+        image[H-b-s : H-b,   W-b-s : W-b],
+    ]
+    ch_n = image.shape[2] if image.ndim == 3 else 1
+    combined = np.concatenate(
+        [p.reshape(-1, ch_n) for p in patches], axis=0)
+    bg = np.median(combined, axis=0).astype(np.uint8)
+    return tuple(int(v) for v in bg) if ch_n > 1 else int(bg[0])
+
+
+def large_card_crop(image, cx, cy, cw, ch, angle, pad_px, bg_color=255):
     """
     Fixed-size crop: content + pad_px on all 4 sides.
     The output dimensions are always exactly (cw + 2*pad_px) x (ch + 2*pad_px).
-    Areas that fall outside the scan boundary are filled with white (255),
-    matching the scanner backlight colour.
+    Areas that fall outside the scan boundary are filled with bg_color,
+    which should be sampled from the actual scanner backlight.
     """
     H, W = image.shape[:2]
     ch_n = image.shape[2] if image.ndim == 3 else 1
     out_w = int(round(cw + 2 * pad_px))
     out_h = int(round(ch + 2 * pad_px))
 
-    # Rotate full image around the card centre; out-of-image areas → white
+    fill = bg_color if isinstance(bg_color, tuple) else (bg_color,) * ch_n
+
+    # Rotate full image around the card centre; out-of-image areas → bg
     M   = cv2.getRotationMatrix2D((cx, cy), angle, 1.0)
     rot = cv2.warpAffine(image, M, (W, H), flags=cv2.INTER_CUBIC,
                          borderMode=cv2.BORDER_CONSTANT,
-                         borderValue=(255,) * ch_n)
+                         borderValue=fill)
 
     # Desired crop window (may extend outside scan bounds)
     x1 = int(round(cx - cw / 2 - pad_px))
@@ -268,9 +296,10 @@ def large_card_crop(image, cx, cy, cw, ch, angle, pad_px):
     x2 = x1 + out_w
     y2 = y1 + out_h
 
-    # White canvas of exact target size
-    canvas = np.full((out_h, out_w, ch_n) if ch_n > 1 else (out_h, out_w),
-                     255, dtype=image.dtype)
+    # Canvas filled with sampled background colour
+    canvas = np.empty((out_h, out_w, ch_n) if ch_n > 1 else (out_h, out_w),
+                      dtype=image.dtype)
+    canvas[:] = fill
 
     # Copy only the in-bounds pixels
     sx1, sy1 = max(0, x1), max(0, y1)
@@ -316,6 +345,9 @@ def card_crop(image, cx, cy, cw, ch, angle,
 def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
     img_h, img_w = image.shape[:2]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Sample scanner backlight colour once for the whole scan
+    bg_color = sample_background(image)
 
     # 1. Kill scanner-edge dark artifacts
     g = gray.copy()
@@ -436,7 +468,8 @@ def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
                     # so output dimensions are constant for a given format.
                     # Out-of-scan areas are filled with white.
                     large_px = int(mm2px(orig_bot, dpi)) + extra_px
-                    lc = large_card_crop(image, cx, cy, cw2, ch2, ang, large_px)
+                    lc = large_card_crop(image, cx, cy, cw2, ch2, ang,
+                                         large_px, bg_color)
 
                 results.append({"fmt": fmt or "unknown",
                                  "tight": t, "card": c, "large_card": lc,
