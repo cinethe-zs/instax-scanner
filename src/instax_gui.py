@@ -105,6 +105,11 @@ class InstaxWindow(Gtk.ApplicationWindow):
         self._chk_card.connect("toggled", self._on_chk_toggled)
         left.pack_start(self._chk_card, False, False, 0)
 
+        self._chk_large = Gtk.CheckButton(label="Large card  — thick border on all 4 sides")
+        self._chk_large.set_active(True)
+        self._chk_large.connect("toggled", self._on_chk_toggled)
+        left.pack_start(self._chk_large, False, False, 0)
+
         # Options
         left.pack_start(self._h("Options"), False, False, 0)
         grid = Gtk.Grid(column_spacing=12, row_spacing=6)
@@ -215,9 +220,9 @@ class InstaxWindow(Gtk.ApplicationWindow):
         dlg.destroy()
 
     def _on_chk_toggled(self, _):
-        # Prevent both boxes being unchecked at the same time
-        if not self._chk_tight.get_active() and not self._chk_card.get_active():
-            # Re-activate whichever was just toggled off
+        # Prevent all boxes being unchecked at the same time
+        if (not self._chk_tight.get_active() and not self._chk_card.get_active()
+                and not self._chk_large.get_active()):
             widget = _
             widget.set_active(True)
         self._refresh()
@@ -238,10 +243,12 @@ class InstaxWindow(Gtk.ApplicationWindow):
                   int(self._thr.get_value()),
                   int(self._dpi.get_value()) or None,
                   self._chk_tight.get_active(),
-                  self._chk_card.get_active())
+                  self._chk_card.get_active(),
+                  self._chk_large.get_active())
         threading.Thread(target=self._worker, args=params, daemon=True).start()
 
-    def _worker(self, files, out_dir, padding, threshold, dpi, save_tight, save_card):
+    def _worker(self, files, out_dir, padding, threshold, dpi,
+                save_tight, save_card, save_large):
         for i, fp in enumerate(files):
             name = Path(fp).name
             GLib.idle_add(self._progress.pulse)
@@ -250,9 +257,10 @@ class InstaxWindow(Gtk.ApplicationWindow):
 
             cmd = [sys.executable, ENGINE, fp, out_dir,
                    "--padding", str(padding), "--threshold", str(threshold)]
-            if dpi:          cmd += ["--dpi", str(dpi)]
-            if not save_tight: cmd += ["--no-tight"]
-            if not save_card:  cmd += ["--no-card"]
+            if dpi:             cmd += ["--dpi", str(dpi)]
+            if not save_tight:  cmd += ["--no-tight"]
+            if not save_card:   cmd += ["--no-card"]
+            if not save_large:  cmd += ["--no-large-card"]
 
             try:
                 proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
@@ -287,7 +295,8 @@ class InstaxWindow(Gtk.ApplicationWindow):
 
     def _refresh(self):
         can_run = (bool(self._files) and not self._running
-                   and (self._chk_tight.get_active() or self._chk_card.get_active()))
+                   and (self._chk_tight.get_active() or self._chk_card.get_active()
+                        or self._chk_large.get_active()))
         self._btn_run.set_sensitive(can_run)
 
     def _log(self, text, tag=None):

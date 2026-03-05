@@ -378,6 +378,7 @@ def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
 
                 # ── Card crop: asymmetric border + orientation (new algorithm) ─
                 c = None
+                lc = None
                 if fmt in INSTAX_BORDER:
                     top_mm, bot_mm, side_mm = INSTAX_BORDER[fmt]
                     rot_card = _is_rotated(fmt, cw2, ch2)
@@ -391,8 +392,12 @@ def detect_photos(image, filepath, dpi, padding_mm, threshold, debug):
                                   top_px, bot_px, side_px,
                                   rotated=rot_card)
 
+                    # ── Large card: thick border (bot_mm) on all 4 sides ──────
+                    large_px = int(mm2px(bot_mm, dpi)) + extra_px
+                    lc = tight_crop(image, cx, cy, cw2, ch2, ang, large_px)
+
                 results.append({"fmt": fmt or "unknown",
-                                 "tight": t, "card": c,
+                                 "tight": t, "card": c, "large_card": lc,
                                  "cx": cx, "cy": cy})
 
     row_bucket = int(mm2px(60, dpi))
@@ -407,21 +412,23 @@ def main():
     if not args or args[0] in ("-h", "--help"):
         print(__doc__); sys.exit(0)
 
-    ipath        = Path(args[0])
-    odir         = None
-    padding_mm   = DEFAULT_PAD
-    threshold    = DEFAULT_THR
-    dpi_override = None
-    save_tight   = True
-    save_card    = True
-    debug        = False
+    ipath          = Path(args[0])
+    odir           = None
+    padding_mm     = DEFAULT_PAD
+    threshold      = DEFAULT_THR
+    dpi_override   = None
+    save_tight     = True
+    save_card      = True
+    save_large_card = True
+    debug          = False
 
     i = 1
     while i < len(args):
         a = args[i]
         if   a == "--debug":                           debug = True
-        elif a == "--no-tight":                        save_tight = False
-        elif a == "--no-card":                         save_card  = False
+        elif a == "--no-tight":                        save_tight      = False
+        elif a == "--no-card":                         save_card       = False
+        elif a == "--no-large-card":                   save_large_card = False
         elif a == "--padding"   and i+1 < len(args):  padding_mm   = float(args[i+1]); i += 1
         elif a == "--threshold" and i+1 < len(args):  threshold    = int(args[i+1]);   i += 1
         elif a == "--dpi"       and i+1 < len(args):  dpi_override = float(args[i+1]); i += 1
@@ -475,6 +482,14 @@ def main():
             ch3, cw3 = r["card"].shape[:2]
             print(f"  [{idx:02d}] {fmt:10s}  card   "
                   f"{cw3}x{ch3}px ({px2mm(cw3,dpi):.0f}x{px2mm(ch3,dpi):.0f}mm)  -> {p2.name}")
+            saved += 1
+
+        if save_large_card and r["large_card"] is not None:
+            p3 = odir / f"{base}_large.jpg"
+            cv2.imwrite(str(p3), r["large_card"], [cv2.IMWRITE_JPEG_QUALITY, JPEG_Q])
+            lh, lw = r["large_card"].shape[:2]
+            print(f"  [{idx:02d}] {fmt:10s}  large  "
+                  f"{lw}x{lh}px ({px2mm(lw,dpi):.0f}x{px2mm(lh,dpi):.0f}mm)  -> {p3.name}")
             saved += 1
 
     print(f"\nDone.  {saved} file(s) saved.")

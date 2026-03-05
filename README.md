@@ -99,15 +99,18 @@ python3 instax_extract.py scan.jpg --padding 2 --dpi 300 --debug
 | `--dpi N` | auto | Override DPI (reads JFIF header, falls back to A4 width inference) |
 | `--no-tight` | — | Skip tight crop output |
 | `--no-card` | — | Skip card-border crop output (Instax only) |
+| `--no-large-card` | — | Skip large card crop output (Instax only) |
 | `--debug` | — | Save intermediate mask images |
 
 ### Output naming
 
 ```
 scan_01_mini.jpg          ← tight crop (content + padding)
-scan_01_mini_card.jpg     ← card crop (full white border)
+scan_01_mini_card.jpg     ← card crop (full white border, asymmetric)
+scan_01_mini_large.jpg    ← large card crop (thick border on all 4 sides)
 scan_02_square.jpg
 scan_02_square_card.jpg
+scan_02_square_large.jpg
 scan_03_unknown.jpg       ← non-Instax print (tight crop only)
 ```
 
@@ -120,7 +123,8 @@ scan_03_unknown.jpg       ← non-Instax print (tight crop only)
 5. **Orientation detection** — brightness probe at 8 mm outside each content edge to locate the thick writing border; handles rotated cards and edge-of-scan placement.
 6. **Tight crop** — symmetric 1 mm padding around content bbox.
 7. **Card crop** — asymmetric padding matching the physical white border; top/bottom swapped if card is flipped.
-8. **Unknown format** — tight crop only (blob bbox = print boundary for standard photographic prints).
+8. **Large card crop** — symmetric padding using the thick border dimension (writing area) on all 4 sides; gives a uniform wide border regardless of card orientation.
+9. **Unknown format** — tight crop only (blob bbox = print boundary for standard photographic prints).
 
 ---
 
@@ -129,7 +133,7 @@ scan_03_unknown.jpg       ← non-Instax print (tight crop only)
 Both GUIs share the same features:
 - Multi-file picker (JPEG / PNG / TIFF)
 - Output folder browser
-- Checkboxes: **Tight crop** / **Card crop** (both on by default; at least one required)
+- Checkboxes: **Tight crop** / **Card crop** / **Large card** (all on by default; at least one required)
 - Options: padding, threshold, DPI override
 - Colour-coded log with auto-scroll
 - "Open output folder" button appears on completion

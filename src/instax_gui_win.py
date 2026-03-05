@@ -94,13 +94,17 @@ class InstaxApp(tk.Tk):
                   font=("Segoe UI", 9)).pack(side=tk.LEFT)
 
         self._section(left, "Output types  (Instax formats)")
-        self._tight_var = tk.BooleanVar(value=True)
-        self._card_var  = tk.BooleanVar(value=True)
+        self._tight_var      = tk.BooleanVar(value=True)
+        self._card_var       = tk.BooleanVar(value=True)
+        self._large_card_var = tk.BooleanVar(value=True)
         tk.Checkbutton(left, text="Tight crop  — image content + padding",
                        variable=self._tight_var, command=self._on_chk,
                        font=("Segoe UI", 9)).pack(anchor=tk.W)
         tk.Checkbutton(left, text="Card crop  — full white border included",
                        variable=self._card_var, command=self._on_chk,
+                       font=("Segoe UI", 9)).pack(anchor=tk.W)
+        tk.Checkbutton(left, text="Large card  — thick border on all 4 sides",
+                       variable=self._large_card_var, command=self._on_chk,
                        font=("Segoe UI", 9)).pack(anchor=tk.W, pady=(0, 10))
 
         self._section(left, "Options")
@@ -206,8 +210,8 @@ class InstaxApp(tk.Tk):
             self._out_var.set(d)
 
     def _on_chk(self):
-        if not self._tight_var.get() and not self._card_var.get():
-            # Prevent both unchecked — re-enable the one just toggled
+        if (not self._tight_var.get() and not self._card_var.get()
+                and not self._large_card_var.get()):
             self._tight_var.set(True)
         self._refresh()
 
@@ -237,11 +241,12 @@ class InstaxApp(tk.Tk):
                   int(self._thr_var.get()),
                   int(self._dpi_var.get()) or None,
                   self._tight_var.get(),
-                  self._card_var.get())
+                  self._card_var.get(),
+                  self._large_card_var.get())
         threading.Thread(target=self._worker, args=params, daemon=True).start()
 
     def _worker(self, files, out_dir, padding, threshold, dpi,
-                save_tight, save_card):
+                save_tight, save_card, save_large):
         for i, fp in enumerate(files):
             name = Path(fp).name
             self.after(0, self._append_log,
@@ -291,6 +296,14 @@ class InstaxApp(tk.Tk):
                                 print(f"  [{idx:02d}] {fmt:10s}  card   "
                                       f"{cw3}x{ch3}px  -> {p2.name}")
                                 saved += 1
+                            if save_large and r["large_card"] is not None:
+                                p3 = out_path / f"{base}_large.jpg"
+                                cv2.imwrite(str(p3), r["large_card"],
+                                            [cv2.IMWRITE_JPEG_QUALITY, 95])
+                                lh, lw = r["large_card"].shape[:2]
+                                print(f"  [{idx:02d}] {fmt:10s}  large  "
+                                      f"{lw}x{lh}px  -> {p3.name}")
+                                saved += 1
                         print(f"\nDone.  {saved} file(s) saved.")
 
             except Exception as e:
@@ -329,7 +342,8 @@ class InstaxApp(tk.Tk):
 
     def _refresh(self):
         can_run = (bool(self._files) and not self._running
-                   and (self._tight_var.get() or self._card_var.get()))
+                   and (self._tight_var.get() or self._card_var.get()
+                        or self._large_card_var.get()))
         self._btn_run.config(state=tk.NORMAL if can_run else tk.DISABLED)
 
     def _append_log(self, text, tag=None):
