@@ -5,7 +5,7 @@
 
 set -e
 
-VERSION="${1:-1.0.2}"
+VERSION="${1:-1.1.0}"
 PKG_NAME="instax-scanner"
 DEB_NAME="${PKG_NAME}_${VERSION}_all.deb"
 BUILD_DIR="$(mktemp -d /tmp/instax-build-XXXXXX)"

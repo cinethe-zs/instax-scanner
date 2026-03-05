@@ -54,7 +54,7 @@ Just copy `dist\instax-scanner.exe` anywhere and double-click it.
 
 ```bash
 chmod +x build.sh
-./build.sh            # produces instax-scanner_1.0.2_all.deb
+./build.sh            # produces instax-scanner_1.1.0_all.deb
 ./build.sh 1.0.3      # custom version number
 ```
 
@@ -67,7 +67,7 @@ Requires only `dpkg-deb` (standard on any Debian/Ubuntu system).
 sudo apt install python3-gi python3-opencv gir1.2-gtk-3.0
 
 # Package
-sudo dpkg -i instax-scanner_1.0.2_all.deb
+sudo dpkg -i instax-scanner_1.1.0_all.deb
 ```
 
 Then launch **Instax Scanner** from your app menu, or run `instax-scanner`.
@@ -123,7 +123,7 @@ scan_03_unknown.jpg       ← non-Instax print (tight crop only)
 5. **Orientation detection** — brightness probe at 8 mm outside each content edge to locate the thick writing border; handles rotated cards and edge-of-scan placement.
 6. **Tight crop** — symmetric 1 mm padding around content bbox.
 7. **Card crop** — asymmetric padding matching the physical white border; top/bottom swapped if card is flipped.
-8. **Large card crop** — symmetric padding using the thick border dimension (writing area) on all 4 sides; gives a uniform wide border regardless of card orientation.
+8. **Large card crop** — symmetric padding using the thick border dimension (writing area) on all 4 sides; gives a fixed-size output per format regardless of card orientation. Scanner backlight colour is sampled from the four corners of the scan and used to fill any area outside the scan boundary.
 9. **Unknown format** — tight crop only (blob bbox = print boundary for standard photographic prints).
 
 ---

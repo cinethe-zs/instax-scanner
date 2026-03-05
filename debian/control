@@ -1,5 +1,5 @@
 Package: instax-scanner
-Version: 1.0.2
+Version: 1.1.0
 Section: graphics
 Priority: optional
 Architecture: all
@@ -14,6 +14,9 @@ Description: Extract Instax photos from flatbed scanner scans
  .
  Features:
   - Supports Mini (62x46mm), Square (62x62mm), and Wide (99x62mm) formats
-  - Produces a tight crop and a full-card bordered crop per photo
+  - Produces tight, card, and large-card crops per photo
+  - Large-card mode: thick border on all 4 sides, fixed size per format,
+    out-of-scan areas filled with the sampled scanner backlight colour
   - Auto-detects scan DPI; handles any rotation and touching photos
   - Batch-process multiple scan files at once
+  - Windows standalone exe (tkinter) and Linux .deb (GTK3)
