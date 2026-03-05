@@ -5,12 +5,14 @@ Extract individual Instax photos from flatbed A4 scanner scans.
 ## Project layout
 
 ```
-instax-scanner-project/
-├── build.sh                  ← build script → produces .deb
+instax-scanner/
+├── build.sh                  ← Linux build script → produces .deb
+├── build_windows.bat         ← Windows build script → produces .exe
 ├── README.md
 ├── src/
-│   ├── instax_extract.py     ← extraction engine (CLI + library)
-│   └── instax_gui.py         ← GTK3 GUI frontend
+│   ├── instax_extract.py     ← extraction engine (CLI + library, cross-platform)
+│   ├── instax_gui.py         ← GTK3 GUI frontend (Linux)
+│   └── instax_gui_win.py     ← tkinter GUI frontend (Windows)
 ├── debian/
 │   ├── control               ← package metadata / dependencies
 │   ├── postinst              ← post-install hook (icon cache, desktop db)
@@ -20,7 +22,35 @@ instax-scanner-project/
     └── instax-scanner.png    ← 128×128 app icon
 ```
 
-## Build the .deb
+---
+
+## Windows
+
+### Build
+
+Requires Python 3.8+ on PATH. Run once from the project root:
+
+```bat
+build_windows.bat
+```
+
+This creates a virtualenv, installs `opencv-python`, `numpy`, and `pyinstaller`, then produces a single standalone executable:
+
+```
+dist\instax-scanner.exe
+```
+
+No Python installation required to run the exe.
+
+### Install
+
+Just copy `dist\instax-scanner.exe` anywhere and double-click it.
+
+---
+
+## Linux
+
+### Build the .deb
 
 ```bash
 chmod +x build.sh
@@ -30,7 +60,7 @@ chmod +x build.sh
 
 Requires only `dpkg-deb` (standard on any Debian/Ubuntu system).
 
-## Install
+### Install
 
 ```bash
 # Dependencies
@@ -94,20 +124,20 @@ scan_03_unknown.jpg       ← non-Instax print (tight crop only)
 
 ---
 
-## GUI: instax_gui.py
+## GUI
 
-GTK3 application (`io.github.instax_scanner`).
-
-**Features**
+Both GUIs share the same features:
 - Multi-file picker (JPEG / PNG / TIFF)
 - Output folder browser
 - Checkboxes: **Tight crop** / **Card crop** (both on by default; at least one required)
 - Options: padding, threshold, DPI override
-- Live colour-coded log with auto-scroll
+- Colour-coded log with auto-scroll
 - "Open output folder" button appears on completion
 - Progress bar during processing
 
-**Runtime dependencies**
+### instax_gui.py — Linux (GTK3)
+
+GTK3 application (`io.github.instax_scanner`).
 
 | Package | Provides |
 |---------|---------|
@@ -115,3 +145,7 @@ GTK3 application (`io.github.instax_scanner`).
 | `gir1.2-gtk-3.0` | GTK3 typelib |
 | `python3-opencv` | cv2 (extraction engine) |
 | `python3-numpy` | numpy (recommended) |
+
+### instax_gui_win.py — Windows (tkinter)
+
+Standalone tkinter application bundled into `instax-scanner.exe` via PyInstaller. No external dependencies required at runtime — everything is included in the exe.
