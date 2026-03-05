@@ -152,4 +152,6 @@ GTK3 application (`io.github.instax_scanner`).
 
 ### instax_gui_win.py — Windows (tkinter)
 
+![Instax Scanner — Windows GUI](assets/screenshot-windows-gui.png)
+
 Standalone tkinter application bundled into `instax-scanner.exe` via PyInstaller. No external dependencies required at runtime — everything is included in the exe.
